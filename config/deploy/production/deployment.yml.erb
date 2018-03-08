@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gcr-notifier
+spec:
+  selector:
+    matchLabels:
+      app: gcr-notifier
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: gcr-notifier
+    spec:
+      containers:
+      - name: gcr-notifier
+        image: gcr.io/amcleodca-fuzz/gcr-notifier/gcr-notifier:<%= current_sha %>
+        env:
+          - name: GITHUB_ACCESS_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: github-token
+                key: token

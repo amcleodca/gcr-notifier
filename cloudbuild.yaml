@@ -1,0 +1,13 @@
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-t', 'gcr.io/$PROJECT_ID/gcr-notifier/nginx:$COMMIT_SHA', '.']
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['push', 'gcr.io/$PROJECT_ID/gcr-notifier/nginx:$COMMIT_SHA' ]
+- name: 'gcr.io/$PROJECT_ID/kubernetes-deploy-builder:latest'
+  args: ['gcr-notifier', 'gke_amcleodca-fuzz_northamerica-northeast1-c_hp48g' ]
+  env:
+  - 'CLOUDSDK_CONTAINER_CLUSTER=hp48g'
+  - 'CLOUDSDK_COMPUTE_ZONE=northamerica-northeast1-c'
+  - 'REVISION=$COMMIT_SHA'
+  - 'ENVIRONMENT=production'
+  - 'KUBECONFIG=.kube/config'
