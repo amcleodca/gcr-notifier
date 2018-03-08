@@ -19,46 +19,6 @@ import (
 	"golang.org/x/oauth2"
 )
 
-type GCRBuildRepoSource struct {
-	BranchName string `json:branchName`
-	ProjectId  string `json:projectId`
-	RepoName   string `json:repoName`
-}
-
-type GCRBuildResolvedRepoSource struct {
-	CommitSha string `json:commitSha`
-	ProjectId string `json:projectId`
-	RepoName  string `json:repoName`
-}
-
-// XXX This is not unmarshaling correctly
-type GCRBuildSource struct {
-	RepoSource GCRBuildRepoSource `json:repoSource`
-}
-
-type GCRBuildSourceProvenance struct {
-	ResolvedRepoSource GCRBuildResolvedRepoSource `json:resolvedRepoSource`
-}
-type GCRBuildStep struct {
-	Args []string `json:args`
-	Name string   `json:name`
-	Env  []string `json:env`
-}
-
-type GCRBuildStatus struct {
-	Id               string                   `json:Id`
-	ProjectId        string                   `json:projectId`
-	CreateTime       string                   `json:createTime`
-	LogUrl           string                   `json:logUrl`
-	LogsBucket       string                   `json:logsBucket`
-	Source           GCRBuildRepoSource       `json:source`
-	SourceProvenance GCRBuildSourceProvenance `json:sourceProvenance`
-	Status           string                   `json:status`
-	Steps            []GCRBuildStep           `json:steps`
-	//Tags
-	Timeout string `json:timeout`
-}
-
 // returns owner, repo, sha, error
 func GetGithubUrlFromStatus(status *GCRBuildStatus) (string, string, string, error) {
 	fields := strings.Split(status.SourceProvenance.ResolvedRepoSource.RepoName, "-")
@@ -72,27 +32,21 @@ func GetGithubUrlFromStatus(status *GCRBuildStatus) (string, string, string, err
 	return fields[1], strings.Join(fields[2:], "-"), status.SourceProvenance.ResolvedRepoSource.CommitSha, nil
 }
 
+var GCRGithubStatus = map[string]string{
+	"QUEUED":         "pending",
+	"WORKING":        "pending",
+	"TIMEOUT":        "failure",
+	"STATUS_UNKNOWN": "error",
+	"SUCCESS":        "success",
+	"FAILURE":        "failure",
+	"INTERNAL_ERROR": "error",
+	"CANCELLED":      "error",
+}
+
 func MakeGithubStatusFromGCR(status *GCRBuildStatus) (*github.RepoStatus, error) {
-	var gstate string
-	switch status.Status {
-	case "QUEUED":
-		gstate = "pending"
-	case "WORKING":
-		gstate = "pending"
-	case "TIMEOUT":
-		gstate = "failure"
-	case "STATUS_UNKNOWN":
-		gstate = "error"
-	case "SUCCESS":
-		gstate = "success"
-	case "FAILURE":
-		gstate = "failure"
-	case "INTERNAL_ERROR":
-		gstate = "error"
-	case "CANCELLED":
-		gstate = "error"
-	default:
-		return nil, errors.New(fmt.Sprintf("Unknown build state: %s", status.Status))
+	status := GCRGithubStatus[status.Status]
+	if status == "" {
+		status = "unknown"
 	}
 
 	return &github.RepoStatus{
@@ -143,7 +97,6 @@ func main() {
 		log.WithError(err).Fatalf("Failed to create subscription: %#v", status.Code(err))
 	}
 
-	// START RECEIVING
 	var mu sync.Mutex
 	received := 0
 	sub := client.Subscription(subscriptionName)
@@ -174,7 +127,4 @@ func main() {
 
 		msg.Ack()
 	})
-	// END RECEIVER
-
-	fmt.Printf("Topic %v created.\n", topic)
 }
