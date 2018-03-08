@@ -1,9 +1,5 @@
 package main
 
-import (
-	"cloud.google.com/go/pubsub"
-)
-
 type GCRBuildRepoSource struct {
 	BranchName string `json:branchName`
 	ProjectId  string `json:projectId`

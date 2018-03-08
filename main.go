@@ -44,13 +44,13 @@ var GCRGithubStatus = map[string]string{
 }
 
 func MakeGithubStatusFromGCR(status *GCRBuildStatus) (*github.RepoStatus, error) {
-	status := GCRGithubStatus[status.Status]
-	if status == "" {
-		status = "unknown"
+	gstatus := GCRGithubStatus[status.Status]
+	if gstatus == "" {
+		gstatus = "unknown"
 	}
 
 	return &github.RepoStatus{
-		State:     &gstate,
+		State:     &gstatus,
 		TargetURL: &status.LogUrl,
 		// Description: "nyi",
 		// Context:     "GCR",
@@ -89,9 +89,9 @@ func main() {
 
 	subscriptionName := "github-status-pusher"
 	// Creates the new topic.
-	topic, err := client.CreateSubscription(context.Background(), subscriptionName, pubsub.SubscriptionConfig{Topic: client.Topic(topicName)})
+	_, err = client.CreateSubscription(context.Background(), subscriptionName, pubsub.SubscriptionConfig{Topic: client.Topic(topicName)})
 	if codes.AlreadyExists == status.Code(err) {
-		log.WithError(err).Warnf("Subscription already exists.")
+		log.WithError(err).Info("Subscription already exists.")
 
 	} else if err != nil {
 		log.WithError(err).Fatalf("Failed to create subscription: %#v", status.Code(err))
