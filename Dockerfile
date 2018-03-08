@@ -1,12 +1,16 @@
-
 FROM golang:alpine  as builder
 
-RUN apk --no-cache add ca-certificates && apk update && apk add glide git
+RUN apk --no-cache add ca-certificates && apk update && apk add git make
+
+RUN go get github.com/golang/dep && \
+    cd $GOPATH/src/github.com/golang/dep && \
+    go install ./...
 
 WORKDIR /go/src/github.com/amcleodca/gcr-notifier
 ADD . .
 
-RUN  go build -o bin/gcr-notifier cmd/gcr-notifier/main.go cmd/gcr-notifier/types.go
+RUN make deps
+RUN make build
 
 FROM alpine 
 
