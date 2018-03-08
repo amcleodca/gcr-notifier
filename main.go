@@ -106,7 +106,7 @@ func MakeGithubStatusFromGCR(status *GCRBuildStatus) (*github.RepoStatus, error)
 func main() {
 
 	/// Auth With Github
-	githubToken := os.GetEnv("GITHUB_ACCESS_TOKEN")
+	githubToken := os.Getenv("GITHUB_ACCESS_TOKEN")
 	if githubToken == "" {
 		log.Fatalf("Github Token is empty string")
 	}
