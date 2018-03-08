@@ -16,7 +16,7 @@ spec:
       - name: gcr-notifier
         image: gcr.io/amcleodca-fuzz/gcr-notifier/gcr-notifier:<%= current_sha %>
         command:
-          - /app/gcr-notifier
+        - /app/gcr-notifier
         env:
           - name: GITHUB_ACCESS_TOKEN
             valueFrom:
