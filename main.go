@@ -97,6 +97,8 @@ func main() {
 		log.WithError(err).Fatalf("Failed to create subscription: %#v", status.Code(err))
 	}
 
+	// XXX HOW TO (should we) create the subscription every time?
+	// XXX IF not, how do we detect the error where the subscription does not exist?
 	var mu sync.Mutex
 	received := 0
 	sub := client.Subscription(subscriptionName)
@@ -104,8 +106,6 @@ func main() {
 	err = sub.Receive(cctx, func(ctx context.Context, msg *pubsub.Message) {
 		mu.Lock()
 		defer mu.Unlock()
-		var buildStatus GCRBuildStatus
-		json.Unmarshal(msg.Data, &buildStatus)
 
 		received++
 		if received >= 10240 {
@@ -114,25 +114,34 @@ func main() {
 			return
 		}
 
-		log.WithFields(log.Fields{
-			"status":  buildStatus.Status,
-			"project": buildStatus.ProjectId,
-			"sha":     buildStatus.SourceProvenance.ResolvedRepoSource.CommitSha,
-			"repo":    buildStatus.SourceProvenance.ResolvedRepoSource.RepoName,
-		}).Infof("got GCR build update")
-
-		githubStatus, err := MakeGithubStatusFromGCR(&buildStatus)
-		if err != nil {
-			log.WithError(err).Warnf("Failed to make github status")
-		}
-		log.Infof("Github Status: %+v", githubStatus)
-		owner, repo, sha, err := GetGithubUrlFromStatus(&buildStatus)
-		if err != nil {
-			log.WithError(err).Errorf("Failed to get URL from build status")
-		}
-
-		ghclient.Repositories.CreateStatus(context.Background(), owner, repo, sha, githubStatus)
+		publishStatus(msg.Data, ghclient)
 
 		msg.Ack()
 	})
+}
+
+func publishStatus(update []byte, ghclient *github.Client) {
+	var buildStatus GCRBuildStatus
+	json.Unmarshal(update, &buildStatus)
+	// XXX detect and log unmarshal failure
+
+	log.WithFields(log.Fields{
+		"status":  buildStatus.Status,
+		"project": buildStatus.ProjectId,
+		"sha":     buildStatus.SourceProvenance.ResolvedRepoSource.CommitSha,
+		"repo":    buildStatus.SourceProvenance.ResolvedRepoSource.RepoName,
+	}).Infof("got GCR build update")
+
+	githubStatus, err := MakeGithubStatusFromGCR(&buildStatus)
+	if err != nil {
+		log.WithError(err).Warnf("Failed to make github status")
+	}
+	log.Infof("Github Status: %+v", githubStatus)
+	owner, repo, sha, err := GetGithubUrlFromStatus(&buildStatus)
+	if err != nil {
+		log.WithError(err).Errorf("Failed to get URL from build status")
+	}
+
+	ghclient.Repositories.CreateStatus(context.Background(), owner, repo, sha, githubStatus)
+
 }
