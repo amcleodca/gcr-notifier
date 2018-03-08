@@ -23,3 +23,14 @@ spec:
               secretKeyRef:
                 name: github-token
                 key: token
+        - name: GOOGLE_APPLICATION_CREDENTIALS
+          value: /var/run/gcloud/gcr-notifier@amcleodca-fuzz.iam.gserviceaccount.com.json
+        volumeMounts:
+        - name: gcloud
+          mountPath: /var/run/gcloud/
+          readOnly: true
+      volumes:
+      - name: gcloud
+        secret:
+          defaultMode: 420
+          secretName: gcp-service-account
