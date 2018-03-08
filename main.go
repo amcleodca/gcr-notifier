@@ -104,15 +104,23 @@ func main() {
 	err = sub.Receive(cctx, func(ctx context.Context, msg *pubsub.Message) {
 		mu.Lock()
 		defer mu.Unlock()
+		var buildStatus GCRBuildStatus
+		json.Unmarshal(msg.Data, &buildStatus)
+
 		received++
-		if received >= 1024 {
+		if received >= 10240 {
 			cancel()
 			msg.Nack()
 			return
 		}
-		var buildStatus GCRBuildStatus
-		json.Unmarshal(msg.Data, &buildStatus)
-		log.Infof("Got message: %+v", buildStatus)
+
+		log.WithFields(log.Fields{
+			"status":  buildStatus.Status,
+			"project": buildStatus.ProjectId,
+			"sha":     buildStatus.SourceProvenance.ResolvedRepoSource.CommitSha,
+			"repo":    buildStatus.SourceProvenance.ResolvedRepoSource.RepoName,
+		}).Infof("got GCR build update")
+
 		githubStatus, err := MakeGithubStatusFromGCR(&buildStatus)
 		if err != nil {
 			log.WithError(err).Warnf("Failed to make github status")
