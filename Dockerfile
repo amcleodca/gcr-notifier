@@ -12,4 +12,4 @@ FROM alpine
 
 WORKDIR /
 RUN apk --no-cache add ca-certificates
-COPY --from=builder /go/src/github.com/amcleodca/pretty-pinboard/bin /app
+COPY --from=builder /go/src/github.com/amcleodca/gcr-notifier/bin /app
