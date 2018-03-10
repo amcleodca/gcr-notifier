@@ -50,7 +50,7 @@ func MakeGithubStatusFromGCR(status *GCRBuildStatus) (*github.RepoStatus, error)
 	}
 
 	gcontext := "Google Container Builder"
-	gdescription := &"Description" // XXX
+	gdescription := "Description" // XXX
 	return &github.RepoStatus{
 		State:       &gstatus,
 		TargetURL:   &status.LogUrl,
@@ -72,7 +72,7 @@ func NewGHClient(token string) (*GHClient, error) {
 
 	githubctx := context.Background()
 	ts := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: githubToken},
+		&oauth2.Token{AccessToken: token},
 	)
 	tc := oauth2.NewClient(githubctx, ts)
 
@@ -89,14 +89,11 @@ func main() {
 		log.WithError(err).Fatal("Failed to create Github client.")
 	}
 
-	// Auth with Google
-	ctx := context.Background()
-
 	// Sets your Google Cloud Platform project ID.
 	projectID := "amcleodca-fuzz"
 
 	// Creates a client.
-	client, err := pubsub.NewClient(ctx, projectID)
+	client, err := pubsub.NewClient(context.Background(), projectID)
 	if err != nil {
 		log.Fatalf("Failed to create client: %v", err)
 	}
@@ -119,7 +116,7 @@ func main() {
 	var mu sync.Mutex
 	received := 0
 	sub := client.Subscription(subscriptionName)
-	cctx, cancel := context.WithCancel(ctx)
+	cctx, cancel := context.WithCancel(context.Background())
 	err = sub.Receive(cctx, func(ctx context.Context, msg *pubsub.Message) {
 		mu.Lock()
 		defer mu.Unlock()
@@ -131,13 +128,13 @@ func main() {
 			return
 		}
 
-		publishStatus(msg.Data, ghclient)
+		ghclient.publishStatus(msg.Data)
 
 		msg.Ack()
 	})
 }
 
-func publishStatus(update []byte, ghclient *github.Client) {
+func (gh GHClient) publishStatus(update []byte) {
 	var buildStatus GCRBuildStatus
 	json.Unmarshal(update, &buildStatus)
 	// XXX detect and log unmarshal failure
@@ -159,6 +156,6 @@ func publishStatus(update []byte, ghclient *github.Client) {
 		log.WithError(err).Errorf("Failed to get URL from build status")
 	}
 
-	ghclient.Repositories.CreateStatus(context.Background(), owner, repo, sha, githubStatus)
+	gh.client.Repositories.CreateStatus(context.Background(), owner, repo, sha, githubStatus)
 
 }
