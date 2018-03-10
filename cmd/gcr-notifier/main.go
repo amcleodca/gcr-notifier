@@ -49,28 +49,45 @@ func MakeGithubStatusFromGCR(status *GCRBuildStatus) (*github.RepoStatus, error)
 		gstatus = "unknown"
 	}
 
+	gcontext := "Google Container Builder"
+	gdescription := &"Description" // XXX
 	return &github.RepoStatus{
-		State:     &gstatus,
-		TargetURL: &status.LogUrl,
-		// Description: "nyi",
-		Context: "Google Container Builder",
+		State:       &gstatus,
+		TargetURL:   &status.LogUrl,
+		Description: &gdescription,
+		Context:     &gcontext,
 	}, nil
 }
 
-func main() {
+type GHClient struct {
+	client *github.Client
+}
 
+func NewGHClient(token string) (*GHClient, error) {
 	/// Auth With Github
-	githubToken := os.Getenv("GITHUB_ACCESS_TOKEN")
-	if githubToken == "" {
-		log.Fatalf("Github Token is empty string")
+	if token == "" {
+		log.Errorf("Github Token is empty string")
+		return nil, errors.New("Token unspecified")
 	}
+
 	githubctx := context.Background()
 	ts := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: githubToken},
 	)
 	tc := oauth2.NewClient(githubctx, ts)
 
-	ghclient := github.NewClient(tc)
+	return &GHClient{
+		client: github.NewClient(tc),
+	}, nil
+
+}
+
+func main() {
+	githubToken := os.Getenv("GITHUB_ACCESS_TOKEN")
+	ghclient, err := NewGHClient(githubToken)
+	if err != nil {
+		log.WithError(err).Fatal("Failed to create Github client.")
+	}
 
 	// Auth with Google
 	ctx := context.Background()
