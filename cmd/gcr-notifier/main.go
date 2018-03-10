@@ -53,7 +53,7 @@ func MakeGithubStatusFromGCR(status *GCRBuildStatus) (*github.RepoStatus, error)
 		State:     &gstatus,
 		TargetURL: &status.LogUrl,
 		// Description: "nyi",
-		// Context:     "GCR",
+		Context: "Google Container Builder",
 	}, nil
 }
 
