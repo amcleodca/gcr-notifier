@@ -128,6 +128,7 @@ func main() {
 			return
 		}
 
+		log.Infof("Got: %s", msg.Data)
 		ghclient.publishStatus(msg.Data)
 
 		msg.Ack()
