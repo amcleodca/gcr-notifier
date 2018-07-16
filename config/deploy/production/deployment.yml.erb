@@ -25,6 +25,8 @@ spec:
                 key: token
           - name: GOOGLE_APPLICATION_CREDENTIALS
             value: /var/run/gcloud/gcr-notifier_amcleodca-fuzz.iam.gserviceaccount.com.json
+          - name: PROJECT_ID
+            value: amcleodca-fuzz
         volumeMounts:
         - name: gcloud
           mountPath: /var/run/gcloud/
