@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: gcr-notifier
+  name: gcb-notifier
 spec:
   selector:
     matchLabels:
-      app: gcr-notifier
+      app: gcb-notifier
   replicas: 1
   template:
     metadata:
       labels:
-        app: gcr-notifier
+        app: gcb-notifier
     spec:
       containers:
-      - name: gcr-notifier
-        image: gcr.io/amcleodca-fuzz/gcr-notifier/gcr-notifier:<%= current_sha %>
+      - name: gcb-notifier
+        image: gcr.io/amcleodca-fuzz/gcb-notifier/gcb-notifier:<%= current_sha %>
         command:
-        - /app/gcr-notifier
+        - /app/gcb-notifier
         env:
           - name: GITHUB_ACCESS_TOKEN
             valueFrom:
@@ -24,7 +24,7 @@ spec:
                 name: github-token
                 key: token
           - name: GOOGLE_APPLICATION_CREDENTIALS
-            value: /var/run/gcloud/gcr-notifier_amcleodca-fuzz.iam.gserviceaccount.com.json
+            value: /var/run/gcloud/gcb-notifier_amcleodca-fuzz.iam.gserviceaccount.com.json
           - name: PROJECT_ID
             value: amcleodca-fuzz
         volumeMounts:

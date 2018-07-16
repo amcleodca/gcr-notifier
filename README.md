@@ -1,10 +1,10 @@
-# gcr-notifier
+# gcb-notifier
 
 A tiny application to publish [Google Cloud Container Builder](https://cloud.google.com/container-builder/) status notifications to github.
 
 # Installation
 ```
-git clone https://github.com/amcleodca/gcr-notifier && cd gcr-notifier
+git clone https://github.com/amcleodca/gcb-notifier && cd gcb-notifier
 make deps
 make
 ```
@@ -13,7 +13,7 @@ make
 ```
 GITHUB_ACCESS_TOKEN=xxx_your_github_token_xxx  \
 PROJECT_ID=xxx_your_gcp_project_id_xxx \
-./bin/gcr-notifier
+./bin/gcb-notifier
 ```
 
 # Deployment to kubernetes

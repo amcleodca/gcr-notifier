@@ -4,12 +4,12 @@ GOBUILD=$(GOCMD) build
 GOCLEAN=$(GOCMD) clean
 GOTEST=$(GOCMD) test
 GOGET=$(GOCMD) get
-BINARY_NAME=gcr-notifier
+BINARY_NAME=gcb-notifier
 BINARY_UNIX=$(BINARY_NAME)_unix
 
 all: build
 build: 
-	$(GOBUILD) -o bin/$(BINARY_NAME) -v cmd/gcr-notifier/main.go
+	$(GOBUILD) -o bin/$(BINARY_NAME) -v cmd/gcb-notifier/main.go
 clean: 
 	$(GOCLEAN)
 	rm -f $(BINARY_NAME)

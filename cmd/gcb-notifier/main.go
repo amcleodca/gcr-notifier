@@ -157,7 +157,7 @@ func publishStatus(update []byte, client GithubStatusUpdater) {
 	}(&buildStatus)
 
 	/* The repo appears to be specified in the form: github-<ORGANIZATION>-<REPOSITORY>,
-	   for example: "github-amcleodca-gcr-notifier"
+	   for example: "github-amcleodca-gcb-notifier"
 	*/
 	fields := strings.Split(repoSource.RepoName, "-")
 	if len(fields) < 3 {

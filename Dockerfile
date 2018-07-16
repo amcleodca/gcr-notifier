@@ -6,7 +6,7 @@ RUN go get github.com/golang/dep && \
     cd $GOPATH/src/github.com/golang/dep && \
     go install ./...
 
-WORKDIR /go/src/github.com/amcleodca/gcr-notifier
+WORKDIR /go/src/github.com/amcleodca/gcb-notifier
 ADD . .
 
 RUN make deps
@@ -16,4 +16,4 @@ FROM alpine
 
 WORKDIR /
 RUN apk --no-cache add ca-certificates
-COPY --from=builder /go/src/github.com/amcleodca/gcr-notifier/bin /app
+COPY --from=builder /go/src/github.com/amcleodca/gcb-notifier/bin /app
