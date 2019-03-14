@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"net/url"
 	"strings"
 	"sync"
 
@@ -13,6 +15,8 @@ import (
 
 	"cloud.google.com/go/pubsub"
 	"github.com/google/go-github/github"
+	googleoauth "golang.org/x/oauth2/google"
+	sourcerepo "google.golang.org/api/sourcerepo/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -130,6 +134,21 @@ func publishStatus(update []byte, client GithubStatusUpdater) {
 		"repo":    repoSource.RepoName,
 	}).Infof("got GCR build update")
 
+	repoURL, err := getSourceRepoMirrorURL(repoSource.ProjectId, repoSource.RepoName)
+	if err != nil {
+		l.WithError(err).WithFields(log.Fields{
+			"sourceProject": repoSource.ProjectId,
+			"sourceRepo":    repoSource.RepoName,
+		}).Error("Failed to get repo URL from source repo")
+		return
+	}
+
+	owner, repo, err := getRepoIdentityFromURL(repoURL)
+	if err != nil {
+		l.WithError(err).WithField("url", repoURL).Error("Failed to get origin repo from source repo URL")
+		return
+	}
+
 	githubStatus := func(buildStatus *GCRBuildStatus) *github.RepoStatus {
 		status := map[string]string{
 			"CANCELLED":      "error",
@@ -156,33 +175,58 @@ func publishStatus(update []byte, client GithubStatusUpdater) {
 		}
 	}(&buildStatus)
 
-	/* The repo appears to be specified in the form: github-<ORGANIZATION>-<REPOSITORY>,
-	   for example: "github-amcleodca-gcb-notifier"
-	*/
-	fields := strings.Split(repoSource.RepoName, "-")
-	if len(fields) < 3 {
-		log.Errorf("Failed to parse github info from %s",
-			repoSource.RepoName)
-		return
+	updateLog := log.Fields{
+		"owner":       owner,
+		"repo":        repo,
+		"State":       *githubStatus.State,
+		"Description": *githubStatus.Description,
+		"TargetURL":   *githubStatus.TargetURL,
 	}
-	if fields[0] != "github" {
-		log.Errorf("Unknown repo type: %s", fields[0])
-		return
-	}
-
-	owner := fields[1]
-	repo := strings.Join(fields[2:], "-")
-
-	_, _, err := client.CreateStatus(context.Background(),
+	_, _, err = client.CreateStatus(context.Background(),
 		owner, repo, repoSource.CommitSha, githubStatus)
 	if err != nil {
-		log.WithError(err).WithFields(log.Fields{
-			"owner":       owner,
-			"repo":        repo,
-			"State":       githubStatus.State,
-			"Description": githubStatus.Description,
-			"TargetURL":   githubStatus.TargetURL,
-		}).Error("Failed to push update to github")
+		l.WithError(err).WithFields(updateLog).Error("Failed to push update to github")
+	} else {
+		l.WithFields(updateLog).Info("sent")
+	}
+}
+
+func getSourceRepoMirrorURL(projectId string, repoName string) (string, error) {
+	oauth, err := googleoauth.DefaultClient(context.TODO(), sourcerepo.SourceReadOnlyScope)
+	if nil != err {
+		return "", fmt.Errorf("Failed to create google auth client: %s", err.Error())
+	}
+	client, err := sourcerepo.New(oauth)
+	if err != nil {
+		return "", fmt.Errorf("Failed to create source repo client: %s", err.Error())
 	}
 
+	fullRepoName := fmt.Sprintf("projects/%s/repos/%s", projectId, repoName)
+	repo, err := client.Projects.Repos.Get(fullRepoName).Do()
+	if err != nil {
+		return "", fmt.Errorf("Failed to get repo %s: %s", fullRepoName, err.Error())
+	}
+	if repo.MirrorConfig == nil {
+		return repo.Url, nil
+	}
+
+	return repo.MirrorConfig.Url, nil
+}
+
+func getRepoIdentityFromURL(repoURL string) (string, string, error) {
+	u, err := url.Parse(repoURL)
+	if err != nil {
+		return "", "", fmt.Errorf("Failed to parse URL: %s: %s", repoURL, err.Error())
+	}
+
+	if u.Hostname() != "github.com" {
+		return "", "", fmt.Errorf("Unknown repo provider for %s", repoURL)
+	}
+	path := strings.Split(u.Path, "/")
+	if len(path) != 3 {
+		return "", "", fmt.Errorf("path too short for %s", repoURL)
+	}
+	owner, repo := path[1], strings.TrimSuffix(path[2], ".git")
+
+	return owner, repo, nil
 }
